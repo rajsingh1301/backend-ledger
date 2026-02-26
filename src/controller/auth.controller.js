@@ -33,5 +33,49 @@ const userRegisterController = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+// usere login controller
+// POST/api/auth/login
+const userLoginController = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-module.exports = { userRegisterController };
+    // find user and explicitly include password
+    const user = await userModel.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // compare password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // create JWT token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "3d" }
+    );
+
+    // set cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 3 * 24 * 60 * 60 * 1000,
+    });
+
+    // remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return res.status(200).json({
+      message: "Login successful",
+      user: userResponse,
+      token,
+    });
+  } catch (error) {
+    console.error("Error logging in user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+module.exports = { userRegisterController, userLoginController} 
