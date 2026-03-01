@@ -1,6 +1,6 @@
 const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
-
+const emailService = require("../services/email.service");
 /*    
  auth register controller
  POST/api/auth/register
@@ -28,6 +28,9 @@ const userRegisterController = async (req, res) => {
       user: { _id: user._id, name: user.name, email: user.email},
         token
     });
+
+    // send registeration email
+    await emailService.sendRegisterEmail(user.email, user.name);
   } catch (error) {
     console.error("Error registering user:", error);
     res.status(500).json({ message: "Server error" });
@@ -68,7 +71,7 @@ const userLoginController = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
-    return res.status(200).json({
+    return res.status(201).json({
       message: "Login successful",
       user: userResponse,
       token,
